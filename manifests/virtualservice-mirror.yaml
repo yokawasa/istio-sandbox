@@ -1,0 +1,24 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: httpbin
+spec:
+  hosts:
+  - httpbin.testns1.svc.cluster.local 
+  gateways:
+  - mesh
+  http:
+  - route:
+    - destination:
+        host: httpbin.testns1.svc.cluster.local 
+        port:
+          number: 8000
+        subset: v1
+      weight: 100
+    # Mirror 100% traffic for v1 to v2 service:
+    mirror:
+      host: httpbin.testns1.svc.cluster.local 
+      port:
+        number: 8000
+      subset: v2
+    mirror_percent: 100
