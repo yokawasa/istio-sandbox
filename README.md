@@ -21,6 +21,7 @@ This is my personal Istio sandbox repository where I play around with [Istio](ht
     - [Per-pod override annotation](#per-pod-override-annotation)
   - [Traffic Management](#traffic-management)
     - [Install Test App](#install-test-app)
+    - [INFO: Virtual Services and Destination Rules](#info-virtual-services-and-destination-rules)
     - [Condition match routing](#condition-match-routing)
     - [Fault Injection](#fault-injection)
       - [Delay](#delay)
@@ -508,6 +509,29 @@ spec:
         imagePullPolicy: IfNotPresent
 EOF
 ```
+
+### INFO: Virtual Services and Destination Rules
+
+![](assets/istio-vs-and-dr.png)
+
+- https://istio.io/latest/docs/concepts/traffic-management/#virtual-services
+- https://istio.io/latest/docs/concepts/traffic-management/#destination-rules
+
+You use `virtual services` to configure how you route your traffic to a given destination while you use `destination rules` to configure policies that can be applied to the traffic for that destination. `Destination rules` are applied after virtual service routing rules are evaluated
+
+- [Virtual Servcies](https://istio.io/latest/docs/reference/config/networking/virtual-service/): Route traffics to the destinaion
+  - Traffic Splits
+  - Condition match routing
+  - Retries
+  - Timeout
+  - Fault injection
+  - Circuit Breaking
+- [Destination Rules](https://istio.io/latest/docs/reference/config/networking/destination-rule/): Defines subsets for the destination service and traffic policies to appliy routed traffic to the destination
+  - Traffic polities
+    - loadBalancer
+    - connectionPool
+    - outlierDetection
+
 ### Condition match routing
 
 The following example Virtual Service routes 90% of traffic to httpbin service to subset v1 in th service and 10% of traffic to httpbin service to subset v2 in the service.
@@ -1150,6 +1174,8 @@ Since the mixer policy was deprecated in Istio 1.5, there is no native rate limi
 
 
 ### Ingress
+
+![](assets/istio-ingress-gateway.png)
 
 #### Ingress Gateay and Gateway
 
