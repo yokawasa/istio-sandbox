@@ -1,0 +1,25 @@
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  namespace: istio-system
+  name: example-istiocontrolplane
+spec:
+  profile: default
+  meshConfig:
+    accessLogFile: /dev/stdout
+    enableTracing: true
+    outboundTrafficPolicy:
+      mode: ALLOW_ANY
+  values:
+    # https://istio.io/v1.4/docs/reference/config/installation-options/#global-options
+    global:
+      proxy:
+       includeIPRanges: "172.30.0.0/16"
+       # multiple
+       # includeIPRanges: "172.30.0.0/16\,172.21.0.0/16\,10.10.10.0/24"
+      logging:
+        level: "default:warning" # override from info
+  #components:
+  #  egressGateways:
+  #  - name: istio-egressgateway
+  #    enabled: true
