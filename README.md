@@ -16,6 +16,9 @@ This is my personal Istio sandbox repository where I play around with [Istio](ht
       - [Customizing the configuration using Istio Operator](#customizing-the-configuration-using-istio-operator)
       - [In-place/Canary upgrade of Istio using the Operator](#in-placecanary-upgrade-of-istio-using-the-operator)
   - [Automatic Sidecar Injection](#automatic-sidecar-injection)
+    - [Configure webhooks namespaceSelector](#configure-webhooks-namespaceselector)
+    - [Configure default policy in ConfigMap istio-sidecar-injector](#configure-default-policy-in-configmap-istio-sidecar-injector)
+    - [Per-pod override annotation](#per-pod-override-annotation)
   - [Traffic Management](#traffic-management)
     - [Install Test App](#install-test-app)
     - [Condition match routing](#condition-match-routing)
@@ -276,7 +279,21 @@ In-place vs. Canary upgrade
 - https://istio.io/latest/docs/setup/install/operator/#in-place-upgrade
 - https://istio.io/latest/docs/setup/install/operator/#canary-upgrade
 
-## Automatic Sidecar Injection
+## Automatic Sidecar Injection 
+
+3 configuration items for Automatic Sidecar Injection
+- webhooks `namespaceSelector` (istio-injection: enabled)
+- default policy (Configured in the ConfigMap `istio-sidecar-injector`)
+- per-pod override annotation (`sidecar.istio.io/inject`)
+
+ref: https://istio.io/latest/blog/2019/data-plane-setup/#automatic-injection
+
+![](assets/automatic-sidecar-injection.png)
+ref: https://istio.io/latest/docs/ops/configuration/mesh/injection-concepts/
+
+### Configure webhooks namespaceSelector
+
+Let's label the namespace where you are deploying the app with `istio-injection=enabled`. Once labeled, Istio injects the sidecar automatically for any pod you deploy in that namespace depending on the `namespaceSelector` mechanism of the admission webhook.
 
 Set namespace label to `testns1` namespace to instruct Istio to automatically inject Envoy sidecar proxies in namespace `testns1`
 
@@ -293,6 +310,52 @@ kubectl get ns ${NAMESPACE} --show-labels
 
 NAME       STATUS   AGE   LABELS
 testns1    Active   14m   istio-injection=enabled
+```
+
+### Configure default policy in ConfigMap istio-sidecar-injector
+
+The automatic sidecar injection not only depends on the `namespaceSelector` mechanism of the webhook, but also on the default injection policy.
+
+Let's take a look at istio-sidecar-injector configmap. As you can see, it is enabled by default
+```
+kubectl -n istio-system get configmap istio-sidecar-injector -o=jsonpath='{.data.config}'
+```
+```yaml
+policy: enabled
+alwaysInjectSelector:
+  []
+neverInjectSelector:
+  []
+injectedAnnotations:
+
+template: |
+..
+```
+
+You can change the default policy by directly editing the configmap
+```
+kubectl -n istio-system edit configmap istio-sidecar-injector 
+```
+
+### Per-pod override annotation
+
+In addition, the automatic sidecar injection depends on the per-pod override annotation - `sidecar.istio.io/inject: "false"`
+
+```yaml
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: ignored
+spec:
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      containers:
+      - name: ignored
+        image: tutum/curl
+        command: ["/bin/sleep","infinity"]
 ```
 
 ## Traffic Management
