@@ -11,14 +11,18 @@ spec:
     outboundTrafficPolicy:
       mode: ALLOW_ANY
   values:
-    # https://istio.io/v1.4/docs/reference/config/installation-options/#global-options
+    ## https://istio.io/v1.4/docs/reference/config/installation-options/#global-options
     global:
       proxy:
-       includeIPRanges: "172.30.0.0/16"
-       # multiple
-       # includeIPRanges: "172.30.0.0/16\,172.21.0.0/16\,10.10.10.0/24"
+        ## Auto Sidecar Injection Policy
+        # autoInject: disabled
+        ## IP Range restrictions of using or bypassing proxy
+        # includeIPRanges: "172.30.0.0/16"
+        # Multiple IP Ranges
+        # includeIPRanges: "172.30.0.0/16,172.21.0.0/16,10.10.10.0/24"
       logging:
-        level: "default:warning" # override from info
+        ## default:info
+        level: "default:warning"
   #components:
   #  egressGateways:
   #  - name: istio-egressgateway
