@@ -846,7 +846,7 @@ EOF
 ```
 - It allows maximum of 3 retries, each with a `2` second timeout.
 - Max time period given for the request is `10 sec` (10 sec timeout for the request)
-- Whichever (either 3 rertires or 10 sec timeout ) comes first cause a request filure
+- Whichever (either 3 retries or 10 sec timeout ) comes first cause a request failure
 
 Send the HTTP request to http://httpbin.testns1.svc.cluster.local/delay/15. The endpoint is supposed to return a response after 15 sec.
 
