@@ -355,7 +355,7 @@ spec:
     spec:
       containers:
       - name: ignored
-        image: tutum/curl
+        image: curlimages/curl
         command: ["/bin/sleep","infinity"]
 ```
 
@@ -482,7 +482,7 @@ spec:
     spec:
       containers:
       - name: sleep
-        image: tutum/curl
+        image: curlimages/curl
         command: ["/bin/sleep","infinity"]
         imagePullPolicy: IfNotPresent
 EOF
@@ -504,7 +504,7 @@ spec:
     spec:
       containers:
       - name: sleep
-        image: tutum/curl
+        image: curlimages/curl
         command: ["/bin/sleep","infinity"]
         imagePullPolicy: IfNotPresent
 EOF
