@@ -30,6 +30,7 @@ This is my personal Istio sandbox repository where I play around with [Istio](ht
     - [Retries](#retries)
       - [retries (perTryTimeout and retryOn)](#retries-pertrytimeout-and-retryon)
       - [retries and timeout](#retries-and-timeout)
+      - [retry only for idempotent methods](#retry-only-for-idempotent-methods)
     - [Mirroring](#mirroring)
     - [Load Balancing](#load-balancing)
     - [Circuit Breaking](#circuit-breaking)
@@ -881,6 +882,89 @@ kubectl logs <v1 pod> -n testns1 -c istio-proxy -f --tail 0
 [2020-11-23T10:52:08.580Z] "GET /delay/15 HTTP/1.1" 0 DC "-" "-" 0 0 1999 - "-" "curl/7.35.0" "fc786864-ce72-4eae-9e20-9d9df1ac26ac" "httpbin.testns1.svc.cluster.local" "127.0.0.1:80" inbound|8000|http|httpbin.testns1.svc.cluster.local 127.0.0.1:45148 192.168.94.99:80 192.168.64.239:55178 outbound_.8000_.v1_.httpbin.testns1.svc.cluster.local default
 [2020-11-23T10:52:10.615Z] "GET /delay/15 HTTP/1.1" 0 DC "-" "-" 0 0 1999 - "-" "curl/7.35.0" "fc786864-ce72-4eae-9e20-9d9df1ac26ac" "httpbin.testns1.svc.cluster.local" "127.0.0.1:80" inbound|8000|http|httpbin.testns1.svc.cluster.local 127.0.0.1:45168 192.168.94.99:80 192.168.64.239:55198 outbound_.8000_.v1_.httpbin.testns1.svc.cluster.local default
 [2020-11-23T10:52:12.711Z] "GET /delay/15 HTTP/1.1" 0 DC "-" "-" 0 0 1999 - "-" "curl/7.35.0" "fc786864-ce72-4eae-9e20-9d9df1ac26ac" "httpbin.testns1.svc.cluster.local" "127.0.0.1:80" inbound|8000|http|httpbin.testns1.svc.cluster.local 127.0.0.1:45190 192.168.94.99:80 192.168.64.239:55220 outbound_.8000_.v1_.httpbin.testns1.svc.cluster.local default
+```
+
+#### retry only for idempotent methods
+You can also configure retries only for idempotent methods (ex. GET method) like this:
+
+```yaml
+# kubectl apply -f manifests/virtualservice-retry-only-idempotent.yaml -n testns1
+
+kubectl apply -n testns1 -f - <<EOF
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: httpbin
+spec:
+  hosts:
+  - httpbin.testns1.svc.cluster.local
+  http:
+  - match:
+    - uri:
+        prefix: /status
+      method:
+        exact: GET
+    - uri:
+        prefix: /delay
+      method:
+        exact: GET
+    timeout: 10s
+    retries:
+      attempts: 2
+      perTryTimeout: 3s
+      retryOn: 5xx,connect-failure
+    route:
+    - destination:
+        host: httpbin.testns1.svc.cluster.local
+        port:
+          number: 8000
+        subset: v1
+  - match:
+    - uri:
+        prefix: /status
+      method:
+        exact: POST
+    - uri:
+        prefix: /delay
+      method:
+        exact: POST
+    timeout: 3s
+    route:
+    - destination:
+        host: httpbin.testns1.svc.cluster.local
+        port:
+          number: 8000
+        subset: v1
+EOF
+```
+
+for GET (idempotent) methods
+- It allows maximum of 2 retries, each with a `3` second timeout.
+- Max time period given for the request is `10 sec` (10 sec timeout for the request)
+- Whichever (either 2 retries or 10 sec timeout ) comes first cause a request failure
+
+for POST (non-idempotent) methods
+- It doesn't retries if the initial call fails.
+- Max time period given for the request is `3 sec` (10 sec timeout for the request)
+
+
+You'll see retries only for GET methods, and no retries for POST methods.
+```bash
+kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -s -X GET "http://httpbin.${NAMESPACE}.svc.cluster.local/delay/2" -o /dev/null -w "status_code:%{http_code}\nresponse_time:%{time_starttransfer}\n"
+status_code:200
+response_time:2.029813
+
+kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -s -X GET "http://httpbin.${NAMESPACE}.svc.cluster.local/delay/4" -o /dev/null -w "status_code:%{http_code}\nresponse_time:%{time_starttransfer}\n"
+status_code:504
+response_time:9.108819
+
+kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -s -X POST "http://httpbin.${NAMESPACE}.svc.cluster.local/delay/2" -o /dev/null -w "status_code:%{http_code}\nresponse_time:%{time_starttransfer}\n"
+status_code:200
+response_time:2.016482
+
+kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -s -X POST "http://httpbin.${NAMESPACE}.svc.cluster.local/delay/4" -o /dev/null -w "status_code:%{http_code}\nresponse_time:%{time_starttransfer}\n"
+status_code:504
+response_time:3.025275
 ```
 
 ### Mirroring
