@@ -760,7 +760,7 @@ Send the HTTP request to http://httpbin.testns1.svc.cluster.local/delay/15. The 
 ```bash
 export NAMESPACE=testns1
 export SLEEP_POD=$(kubectl get pod -l app=sleep -n $NAMESPACE -o jsonpath={.items..metadata.name})
-kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv  "http://httpbin.${NAMESPACE}.svc.cluster.local/delay/15"
+kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv "http://httpbin.${NAMESPACE}.svc.cluster.local/delay/15"
 ```
 
 You'll see 504 gateway timeout 10 sec after you send the request
@@ -865,7 +865,7 @@ Send the HTTP request to http://non-existent-service.testns1.svc.cluster.local/.
 ```bash
 export NAMESPACE=testns1
 export SLEEP_POD=$(kubectl get pod -l app=sleep -n $NAMESPACE -o jsonpath={.items..metadata.name})
-kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv  "http://non-existent-service.${NAMESPACE}.svc.cluster.local/"
+kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv "http://non-existent-service.${NAMESPACE}.svc.cluster.local/"
 ```
 
 You'll see 503 timeout 4 sec after you send the request
@@ -920,7 +920,7 @@ Send the HTTP request to http://non-existent-service.testns1.svc.cluster.local/.
 ```bash
 export NAMESPACE=testns1
 export SLEEP_POD=$(kubectl get pod -l app=sleep -n $NAMESPACE -o jsonpath={.items..metadata.name})
-kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv  "http://non-existent-service.${NAMESPACE}.svc.cluster.local/"
+kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv "http://non-existent-service.${NAMESPACE}.svc.cluster.local/"
 ```
 
 You'll see 503 timeout 5 sec after you send the request
@@ -1020,7 +1020,7 @@ Send the HTTP request to http://httpbin.testns1.svc.cluster.local/delay/15. The 
 ```bash
 export NAMESPACE=testns1
 export SLEEP_POD=$(kubectl get pod -l app=sleep -n $NAMESPACE -o jsonpath={.items..metadata.name})
-kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv  "http://httpbin.${NAMESPACE}.svc.cluster.local/delay/15"
+kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv "http://httpbin.${NAMESPACE}.svc.cluster.local/delay/15"
 ```
 
 You'll see 504 gateway timeout 6+ sec after you send the request. What happend is it ended upt with 504 Gateway Timeout after 3 retries with each 2 sec timeout.
