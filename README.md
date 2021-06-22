@@ -27,7 +27,7 @@ This is my personal Istio sandbox repository where I play around with [Istio](ht
       - [Delay](#delay)
       - [Abort](#abort)
     - [Timeout](#timeout)
-      - [Read Timeout](#read-timeout)
+      - [Request Timeout](#request-timeout)
       - [Connect Timeout](#connect-timeout)
       - [Idle Timeout](#idle-timeout)
     - [Retries](#retries)
@@ -730,7 +730,7 @@ See also [Injecting an HTTP delay fault](https://istio.io/latest/docs/tasks/traf
 
 ### Timeout
 
-#### Read Timeout
+#### Request Timeout
 The configuration below set 10 sec timeout for a request to the httpbin service.
 
 ```yaml
@@ -889,7 +889,7 @@ You'll see 503 timeout 4 sec after you send the request
 See also [ConnectionPoolSetting.TCPSettings](https://istio.io/latest/docs/reference/config/networking/destination-rule/#ConnectionPoolSettings-TCPSettings)
 
 #### Idle Timeout
-The configuration below set 5 sec http read timeout for a request to the non-existent service.
+The configuration below set 5 sec http idle timeout for a request to the non-existent service.
 
 Set the http idle timeout in spec.trafficPolicy.connectionPool.http.idleTimeout in DestinationRule.
 (The default is 1h.)
