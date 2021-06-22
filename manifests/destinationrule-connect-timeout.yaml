@@ -1,9 +1,9 @@
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
-  name: non-existent-srevice
+  name: non-existent-service
 spec:
-  host: non-existent-srevice.testns1.svc.cluster.local
+  host: non-existent-service.testns1.svc.cluster.local
   trafficPolicy:
     connectionPool:
       tcp:

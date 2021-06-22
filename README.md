@@ -793,14 +793,14 @@ kubectl apply -n testns1 -f - <<EOF
 apiVersion: v1
 kind: Service
 metadata:
-  name: non-existent-srevice
+  name: non-existent-service
 spec:
   clusterIP: None
 ---
 apiVersion: v1
 kind: Endpoints
 metadata:
-  name: non-existent-srevice
+  name: non-existent-service
 subsets:
   - addresses:
     - ip: <non-existent IP address>
@@ -808,10 +808,10 @@ subsets:
 apiVersion: networking.istio.io/v1alpha3
 kind: ServiceEntry
 metadata:
-  name: non-existent-srevice
+  name: non-existent-service
 spec:
   hosts:
-  - non-existent-srevice.testns1.svc.cluster.local
+  - non-existent-service.testns1.svc.cluster.local
   ports:
   - number: 80
     name: http
@@ -830,14 +830,14 @@ kubectl apply -n testns1 -f - <<EOF
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
-  name: non-existent-srevice
+  name: non-existent-service
 spec:
   hosts:
-  - non-existent-srevice.testns1.svc.cluster.local 
+  - non-existent-service.testns1.svc.cluster.local 
   http:
   - route:
     - destination:
-        host: non-existent-srevice.testns1.svc.cluster.local 
+        host: non-existent-service.testns1.svc.cluster.local 
         port:
           number: 80
     retries:
@@ -850,9 +850,9 @@ kubectl apply -n testns1 -f - <<EOF
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
-  name: non-existent-srevice
+  name: non-existent-service
 spec:
-  host: non-existent-srevice.testns1.svc.cluster.local
+  host: non-existent-service.testns1.svc.cluster.local
   trafficPolicy:
     connectionPool:
       tcp:
@@ -860,19 +860,19 @@ spec:
 EOF
 ```
 
-Send the HTTP request to http://non-existent-srevice.testns1.svc.cluster.local/. The endpoint is supposed to return a response after 4 sec.
+Send the HTTP request to http://non-existent-service.testns1.svc.cluster.local/. The endpoint is supposed to return a response after 4 sec.
 
 ```bash
 export NAMESPACE=testns1
 export SLEEP_POD=$(kubectl get pod -l app=sleep -n $NAMESPACE -o jsonpath={.items..metadata.name})
-kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv  "http://non-existent-srevice.${NAMESPACE}.svc.cluster.local/"
+kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv  "http://non-existent-service.${NAMESPACE}.svc.cluster.local/"
 ```
 
 You'll see 503 timeout 4 sec after you send the request
 ```txt
-* Connected to non-existent-srevice.testns1.svc.cluster.local (10.100.62.253) port 80 (#0)
+* Connected to non-existent-service.testns1.svc.cluster.local (10.100.62.253) port 80 (#0)
 > GET / HTTP/1.1
-> Host: non-existent-srevice.testns1.svc.cluster.local
+> Host: non-existent-service.testns1.svc.cluster.local
 > User-Agent: curl/7.77.0-DEV
 > Accept: */*
 >
@@ -883,7 +883,7 @@ You'll see 503 timeout 4 sec after you send the request
 < date: Tue, 22 Jun 2021 07:18:55 GMT
 < server: envoy
 <
-* Connection #0 to host non-existent-srevice.testns1.svc.cluster.local left intact
+* Connection #0 to host non-existent-service.testns1.svc.cluster.local left intact
 ```
 
 See also [ConnectionPoolSetting.TCPSettings](https://istio.io/latest/docs/reference/config/networking/destination-rule/#ConnectionPoolSettings-TCPSettings)
@@ -905,9 +905,9 @@ kubectl apply -n testns1 -f - <<EOF
 apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
-  name: non-existent-srevice
+  name: non-existent-service
 spec:
-  host: non-existent-srevice.testns1.svc.cluster.local
+  host: non-existent-service.testns1.svc.cluster.local
   trafficPolicy:
     connectionPool:
       http:
@@ -915,19 +915,19 @@ spec:
 EOF
 ```
 
-Send the HTTP request to http://non-existent-srevice.testns1.svc.cluster.local/. The endpoint is supposed to return a response after 5 sec.
+Send the HTTP request to http://non-existent-service.testns1.svc.cluster.local/. The endpoint is supposed to return a response after 5 sec.
 
 ```bash
 export NAMESPACE=testns1
 export SLEEP_POD=$(kubectl get pod -l app=sleep -n $NAMESPACE -o jsonpath={.items..metadata.name})
-kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv  "http://non-existent-srevice.${NAMESPACE}.svc.cluster.local/"
+kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv  "http://non-existent-service.${NAMESPACE}.svc.cluster.local/"
 ```
 
 You'll see 503 timeout 5 sec after you send the request
 ```txt
-* Connected to non-existent-srevice.testns1.svc.cluster.local (10.100.62.253) port 80 (#0)
+* Connected to non-existent-service.testns1.svc.cluster.local (10.100.62.253) port 80 (#0)
 > GET / HTTP/1.1
-> Host: non-existent-srevice.testns1.svc.cluster.local
+> Host: non-existent-service.testns1.svc.cluster.local
 > User-Agent: curl/7.77.0-DEV
 > Accept: */*
 >
@@ -938,7 +938,7 @@ You'll see 503 timeout 5 sec after you send the request
 < date: Tue, 22 Jun 2021 07:18:55 GMT
 < server: envoy
 <
-* Connection #0 to host non-existent-srevice.testns1.svc.cluster.local left intact
+* Connection #0 to host non-existent-service.testns1.svc.cluster.local left intact
 ```
 
 See also [ConnectionPoolSetting.HTTPSettings](https://istio.io/latest/docs/reference/config/networking/destination-rule/#ConnectionPoolSettings-HTTPSettings)
