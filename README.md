@@ -897,8 +897,6 @@ The default value of connectTimeout is 10 sec, so the request will timeout at id
 Set the http idle timeout in spec.trafficPolicy.connectionPool.http.idleTimeout in DestinationRule.
 (The default is 1 hour.)
 ```yaml
-DestinationRule
-
 # kubectl apply -f manifests/destination-rule-idle-timeout.yaml -n testns1
 
 kubectl apply -n testns1 -f - <<EOF
