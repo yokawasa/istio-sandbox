@@ -891,7 +891,7 @@ See also [ConnectionPoolSetting.TCPSettings](https://istio.io/latest/docs/refere
 #### Idle Timeout
 The configuration below set 5 sec http idle timeout for a request to the non-existent service.
 
-Using the service created in [Connect Timeout](#connect-timeout), delete the connectTimeout and set idleTimetou to 5 sec in DestinationRule.
+Using the service created in [Connect Timeout](#connect-timeout), delete the connectTimeout and set idleTimeout to 5 sec in DestinationRule.
 The default value of connectTimeout is 10 sec, so the request will timeout at idleTimeout 5 sec.
 
 Set the http idle timeout in spec.trafficPolicy.connectionPool.http.idleTimeout in DestinationRule.
