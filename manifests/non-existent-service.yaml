@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: non-existent-srevice
+spec:
+  clusterIP: None
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: non-existent-srevice
+subsets:
+  - addresses:
+    - ip: <non-existent IP address> # Set non-existent IP address.
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: non-existent-srevice
+spec:
+  hosts:
+  - non-existent-srevice.testns1.svc.cluster.local
+  ports:
+  - number: 80
+    name: http
+    protocol: HTTP
+  resolution: DNS
+  location: MESH_EXTERNAL

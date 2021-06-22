@@ -27,6 +27,9 @@ This is my personal Istio sandbox repository where I play around with [Istio](ht
       - [Delay](#delay)
       - [Abort](#abort)
     - [Timeout](#timeout)
+      - [Read Timeout](#read-timeout)
+      - [Connect Timeout](#connect-timeout)
+      - [Idle Timeout](#idle-timeout)
     - [Retries](#retries)
       - [retries (perTryTimeout and retryOn)](#retries-pertrytimeout-and-retryon)
       - [retries and timeout](#retries-and-timeout)
@@ -727,6 +730,7 @@ See also [Injecting an HTTP delay fault](https://istio.io/latest/docs/tasks/traf
 
 ### Timeout
 
+#### Read Timeout
 The configuration below set 10 sec timeout for a request to the httpbin service.
 
 ```yaml
@@ -775,6 +779,166 @@ You'll see 504 gateway timeout 10 sec after you send the request
 < server: envoy
 ```
 See also [Request Timeouts](https://istio.io/latest/docs/tasks/traffic-management/request-timeouts/)
+
+#### Connect Timeout
+The configuration below set 4 sec tcp connection timeout for a request to the non-existent service.
+
+Prepare a non-existent service and check the connect timeout.
+The ip in the Endpoints resource should be a non-existent IP address.
+
+```yaml
+# kubectl apply -f manifests/non-existent-service.yaml -n testns1
+
+kubectl apply -n testns1 -f - <<EOF
+apiVersion: v1
+kind: Service
+metadata:
+  name: non-existent-srevice
+spec:
+  clusterIP: None
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: non-existent-srevice
+subsets:
+  - addresses:
+    - ip: <non-existent IP address>
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: ServiceEntry
+metadata:
+  name: non-existent-srevice
+spec:
+  hosts:
+  - non-existent-srevice.testns1.svc.cluster.local
+  ports:
+  - number: 80
+    name: http
+    protocol: HTTP
+  resolution: DNS
+  location: MESH_EXTERNAL
+EOF
+```
+
+Set the tcp connection timeout in spec.trafficPolicy.connectionPool.tcp.connectTimeout in DestinationRule.
+(The default is 10s.)
+```yaml
+# kubectl apply -f manifests/virtualservice-non-existent-service.yaml -n testns1
+
+kubectl apply -n testns1 -f - <<EOF
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: non-existent-srevice
+spec:
+  hosts:
+  - non-existent-srevice.testns1.svc.cluster.local 
+  http:
+  - route:
+    - destination:
+        host: non-existent-srevice.testns1.svc.cluster.local 
+        port:
+          number: 80
+    retries:
+      attempts: 0
+EOF
+
+# kubectl apply -f manifests/destination-rule-connect-timeout.yaml -n testns1
+
+kubectl apply -n testns1 -f - <<EOF
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: non-existent-srevice
+spec:
+  host: non-existent-srevice.testns1.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        connectTimeout: 4s
+EOF
+```
+
+Send the HTTP request to http://non-existent-srevice.testns1.svc.cluster.local/. The endpoint is supposed to return a response after 4 sec.
+
+```bash
+export NAMESPACE=testns1
+export SLEEP_POD=$(kubectl get pod -l app=sleep -n $NAMESPACE -o jsonpath={.items..metadata.name})
+kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv  "http://non-existent-srevice.${NAMESPACE}.svc.cluster.local/"
+```
+
+You'll see 503 timeout 4 sec after you send the request
+```txt
+* Connected to non-existent-srevice.testns1.svc.cluster.local (10.100.62.253) port 80 (#0)
+> GET / HTTP/1.1
+> Host: non-existent-srevice.testns1.svc.cluster.local
+> User-Agent: curl/7.77.0-DEV
+> Accept: */*
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 503 Service Unavailable
+< content-length: 84
+< content-type: text/plain
+< date: Tue, 22 Jun 2021 07:18:55 GMT
+< server: envoy
+<
+* Connection #0 to host non-existent-srevice.testns1.svc.cluster.local left intact
+```
+
+See also [ConnectionPoolSetting.TCPSettings](https://istio.io/latest/docs/reference/config/networking/destination-rule/#ConnectionPoolSettings-TCPSettings)
+
+#### Idle Timeout
+The configuration below set 5 sec http read timeout for a request to the non-existent service.
+
+Set the http idle timeout in spec.trafficPolicy.connectionPool.http.idleTimeout in DestinationRule.
+(The default is 1h.)
+```yaml
+DestinationRule
+
+# kubectl apply -f manifests/destination-rule-idle-timeout.yaml -n testns1
+
+kubectl apply -n testns1 -f - <<EOF
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: non-existent-srevice
+spec:
+  host: non-existent-srevice.testns1.svc.cluster.local
+  trafficPolicy:
+    connectionPool:
+      http:
+        idleTimeout: 5s
+EOF
+```
+
+Send the HTTP request to http://non-existent-srevice.testns1.svc.cluster.local/. The endpoint is supposed to return a response after 5 sec.
+
+```bash
+export NAMESPACE=testns1
+export SLEEP_POD=$(kubectl get pod -l app=sleep -n $NAMESPACE -o jsonpath={.items..metadata.name})
+kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv  "http://non-existent-srevice.${NAMESPACE}.svc.cluster.local/"
+```
+
+You'll see 503 timeout 5 sec after you send the request
+```txt
+* Connected to non-existent-srevice.testns1.svc.cluster.local (10.100.62.253) port 80 (#0)
+> GET / HTTP/1.1
+> Host: non-existent-srevice.testns1.svc.cluster.local
+> User-Agent: curl/7.77.0-DEV
+> Accept: */*
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 503 Service Unavailable
+< content-length: 84
+< content-type: text/plain
+< date: Tue, 22 Jun 2021 07:18:55 GMT
+< server: envoy
+<
+* Connection #0 to host non-existent-srevice.testns1.svc.cluster.local left intact
+```
+
+See also [ConnectionPoolSetting.HTTPSettings](https://istio.io/latest/docs/reference/config/networking/destination-rule/#ConnectionPoolSettings-HTTPSettings)
 
 ### Retries
 
