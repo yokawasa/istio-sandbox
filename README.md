@@ -1052,7 +1052,7 @@ kubectl logs <v1 pod> -n testns1 -c istio-proxy -f --tail 0
 
 #### retries (baseInterval and maxInterval)
 The retry interval can be controlled by setting envoyfilter.
-In the following configuration, base_interval is set to 4S and max_interval is set to 5s.
+In the following configuration, base_interval is set to 4s and max_interval is set to 5s.
 
 ```yaml
 # kubectl apply -f manifests/envoyfilter-retries-interval.yaml -n testns1
