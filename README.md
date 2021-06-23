@@ -913,7 +913,7 @@ spec:
 EOF
 ```
 
-Send the HTTP request to http://non-existent-service.testns1.svc.cluster.local/. The endpoint is supposed to return a response after 5 sec.
+Send the HTTP request to http://non-existent-service.testns1.svc.cluster.local/. The IP address of this endpoint is invalid, so the request will fail and trigger a idle timeout after 5 sec.
 
 ```bash
 export NAMESPACE=testns1
