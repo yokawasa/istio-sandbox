@@ -860,7 +860,7 @@ spec:
 EOF
 ```
 
-Send the HTTP request to http://non-existent-srevice.testns1.svc.cluster.local/. The IP address of this endpoint is invalid, so the request will fail and trigger a connection timeout after 4 sec.
+Send the HTTP request to http://non-existent-service.testns1.svc.cluster.local/. The IP address of this endpoint is invalid, so the request will fail and trigger a connection timeout after 4 sec.
 
 ```bash
 export NAMESPACE=testns1
