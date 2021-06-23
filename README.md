@@ -27,12 +27,10 @@ This is my personal Istio sandbox repository where I play around with [Istio](ht
       - [Delay](#delay)
       - [Abort](#abort)
     - [Timeout](#timeout)
-      - [Request Timeout](#request-timeout)
-      - [Connect Timeout](#connect-timeout)
-      - [Idle Timeout](#idle-timeout)
     - [Retries](#retries)
       - [retries (perTryTimeout and retryOn)](#retries-pertrytimeout-and-retryon)
       - [retries and timeout](#retries-and-timeout)
+      - [retries (baseInterval and maxInterval)](#retries-baseinterval-and-maxinterval)
       - [retry only for idempotent methods](#retry-only-for-idempotent-methods)
     - [Mirroring](#mirroring)
     - [Load Balancing](#load-balancing)
@@ -284,7 +282,7 @@ In-place vs. Canary upgrade
 - https://istio.io/latest/docs/setup/install/operator/#in-place-upgrade
 - https://istio.io/latest/docs/setup/install/operator/#canary-upgrade
 
-## Automatic Sidecar Injection 
+## Automatic Sidecar Injection
 
 3 configuration items for Automatic Sidecar Injection
 - webhooks `namespaceSelector` (istio-injection: enabled)
@@ -339,7 +337,7 @@ template: |
 
 You can change the default policy by directly editing the configmap
 ```
-kubectl -n istio-system edit configmap istio-sidecar-injector 
+kubectl -n istio-system edit configmap istio-sidecar-injector
 ```
 
 ### Per-pod override annotation
@@ -730,7 +728,6 @@ See also [Injecting an HTTP delay fault](https://istio.io/latest/docs/tasks/traf
 
 ### Timeout
 
-#### Request Timeout
 The configuration below set 10 sec timeout for a request to the httpbin service.
 
 ```yaml
@@ -743,11 +740,11 @@ metadata:
   name: httpbin
 spec:
   hosts:
-  - httpbin.testns1.svc.cluster.local 
+  - httpbin.testns1.svc.cluster.local
   http:
   - route:
     - destination:
-        host: httpbin.testns1.svc.cluster.local 
+        host: httpbin.testns1.svc.cluster.local
         port:
           number: 8000
         subset: v1
@@ -760,7 +757,7 @@ Send the HTTP request to http://httpbin.testns1.svc.cluster.local/delay/15. The 
 ```bash
 export NAMESPACE=testns1
 export SLEEP_POD=$(kubectl get pod -l app=sleep -n $NAMESPACE -o jsonpath={.items..metadata.name})
-kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv "http://httpbin.${NAMESPACE}.svc.cluster.local/delay/15"
+kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv  "http://httpbin.${NAMESPACE}.svc.cluster.local/delay/15"
 ```
 
 You'll see 504 gateway timeout 10 sec after you send the request
@@ -779,167 +776,6 @@ You'll see 504 gateway timeout 10 sec after you send the request
 < server: envoy
 ```
 See also [Request Timeouts](https://istio.io/latest/docs/tasks/traffic-management/request-timeouts/)
-
-#### Connect Timeout
-The configuration below set 4 sec tcp connection timeout for a request to the non-existent service.
-
-Prepare a non-existent service and check the connect timeout.
-The ip in the Endpoints resource should be a non-existent IP address.
-
-```yaml
-# kubectl apply -f manifests/non-existent-service.yaml -n testns1
-
-kubectl apply -n testns1 -f - <<EOF
-apiVersion: v1
-kind: Service
-metadata:
-  name: non-existent-service
-spec:
-  clusterIP: None
----
-apiVersion: v1
-kind: Endpoints
-metadata:
-  name: non-existent-service
-subsets:
-  - addresses:
-    - ip: <non-existent IP address>
----
-apiVersion: networking.istio.io/v1alpha3
-kind: ServiceEntry
-metadata:
-  name: non-existent-service
-spec:
-  hosts:
-  - non-existent-service.testns1.svc.cluster.local
-  ports:
-  - number: 80
-    name: http
-    protocol: HTTP
-  resolution: DNS
-  location: MESH_EXTERNAL
-EOF
-```
-
-Set the tcp connection timeout in spec.trafficPolicy.connectionPool.tcp.connectTimeout in DestinationRule.
-(The default is 10 sec.)
-```yaml
-# kubectl apply -f manifests/virtualservice-non-existent-service.yaml -n testns1
-
-kubectl apply -n testns1 -f - <<EOF
-apiVersion: networking.istio.io/v1alpha3
-kind: VirtualService
-metadata:
-  name: non-existent-service
-spec:
-  hosts:
-  - non-existent-service.testns1.svc.cluster.local 
-  http:
-  - route:
-    - destination:
-        host: non-existent-service.testns1.svc.cluster.local 
-        port:
-          number: 80
-    retries:
-      attempts: 0
-EOF
-
-# kubectl apply -f manifests/destination-rule-connect-timeout.yaml -n testns1
-
-kubectl apply -n testns1 -f - <<EOF
-apiVersion: networking.istio.io/v1alpha3
-kind: DestinationRule
-metadata:
-  name: non-existent-service
-spec:
-  host: non-existent-service.testns1.svc.cluster.local
-  trafficPolicy:
-    connectionPool:
-      tcp:
-        connectTimeout: 4s
-EOF
-```
-
-Send the HTTP request to http://non-existent-service.testns1.svc.cluster.local/. The IP address of this endpoint is invalid, so the request will fail and trigger a connection timeout after 4 sec.
-
-```bash
-export NAMESPACE=testns1
-export SLEEP_POD=$(kubectl get pod -l app=sleep -n $NAMESPACE -o jsonpath={.items..metadata.name})
-kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv "http://non-existent-service.${NAMESPACE}.svc.cluster.local/"
-```
-
-You'll see 503 timeout 4 sec after you send the request
-```txt
-* Connected to non-existent-service.testns1.svc.cluster.local (10.100.62.253) port 80 (#0)
-> GET / HTTP/1.1
-> Host: non-existent-service.testns1.svc.cluster.local
-> User-Agent: curl/7.77.0-DEV
-> Accept: */*
->
-* Mark bundle as not supporting multiuse
-< HTTP/1.1 503 Service Unavailable
-< content-length: 84
-< content-type: text/plain
-< date: Tue, 22 Jun 2021 07:18:55 GMT
-< server: envoy
-<
-* Connection #0 to host non-existent-service.testns1.svc.cluster.local left intact
-```
-
-See also [ConnectionPoolSetting.TCPSettings](https://istio.io/latest/docs/reference/config/networking/destination-rule/#ConnectionPoolSettings-TCPSettings)
-
-#### Idle Timeout
-The configuration below set 5 sec http idle timeout for a request to the non-existent service.
-
-Using the service created in [Connect Timeout](#connect-timeout), delete the connectTimeout and set idleTimeout to 5 sec in DestinationRule.
-The default value of connectTimeout is 10 sec, so the request will timeout at idleTimeout 5 sec.
-
-Set the http idle timeout in spec.trafficPolicy.connectionPool.http.idleTimeout in DestinationRule.
-(The default is 1 hour.)
-```yaml
-# kubectl apply -f manifests/destination-rule-idle-timeout.yaml -n testns1
-
-kubectl apply -n testns1 -f - <<EOF
-apiVersion: networking.istio.io/v1alpha3
-kind: DestinationRule
-metadata:
-  name: non-existent-service
-spec:
-  host: non-existent-service.testns1.svc.cluster.local
-  trafficPolicy:
-    connectionPool:
-      http:
-        idleTimeout: 5s
-EOF
-```
-
-Send the HTTP request to http://non-existent-service.testns1.svc.cluster.local/. The IP address of this endpoint is invalid, so the request will fail and trigger a idle timeout after 5 sec.
-
-```bash
-export NAMESPACE=testns1
-export SLEEP_POD=$(kubectl get pod -l app=sleep -n $NAMESPACE -o jsonpath={.items..metadata.name})
-kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv "http://non-existent-service.${NAMESPACE}.svc.cluster.local/"
-```
-
-You'll see 503 timeout 5 sec after you send the request
-```txt
-* Connected to non-existent-service.testns1.svc.cluster.local (10.100.62.253) port 80 (#0)
-> GET / HTTP/1.1
-> Host: non-existent-service.testns1.svc.cluster.local
-> User-Agent: curl/7.77.0-DEV
-> Accept: */*
->
-* Mark bundle as not supporting multiuse
-< HTTP/1.1 503 Service Unavailable
-< content-length: 84
-< content-type: text/plain
-< date: Tue, 22 Jun 2021 07:18:55 GMT
-< server: envoy
-<
-* Connection #0 to host non-existent-service.testns1.svc.cluster.local left intact
-```
-
-See also [ConnectionPoolSetting.HTTPSettings](https://istio.io/latest/docs/reference/config/networking/destination-rule/#ConnectionPoolSettings-HTTPSettings)
 
 ### Retries
 
@@ -1018,7 +854,7 @@ Send the HTTP request to http://httpbin.testns1.svc.cluster.local/delay/15. The 
 ```bash
 export NAMESPACE=testns1
 export SLEEP_POD=$(kubectl get pod -l app=sleep -n $NAMESPACE -o jsonpath={.items..metadata.name})
-kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv "http://httpbin.${NAMESPACE}.svc.cluster.local/delay/15"
+kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv  "http://httpbin.${NAMESPACE}.svc.cluster.local/delay/15"
 ```
 
 You'll see 504 gateway timeout 6+ sec after you send the request. What happend is it ended upt with 504 Gateway Timeout after 3 retries with each 2 sec timeout.
@@ -1047,6 +883,61 @@ kubectl logs <v1 pod> -n testns1 -c istio-proxy -f --tail 0
 [2020-11-23T10:52:08.580Z] "GET /delay/15 HTTP/1.1" 0 DC "-" "-" 0 0 1999 - "-" "curl/7.35.0" "fc786864-ce72-4eae-9e20-9d9df1ac26ac" "httpbin.testns1.svc.cluster.local" "127.0.0.1:80" inbound|8000|http|httpbin.testns1.svc.cluster.local 127.0.0.1:45148 192.168.94.99:80 192.168.64.239:55178 outbound_.8000_.v1_.httpbin.testns1.svc.cluster.local default
 [2020-11-23T10:52:10.615Z] "GET /delay/15 HTTP/1.1" 0 DC "-" "-" 0 0 1999 - "-" "curl/7.35.0" "fc786864-ce72-4eae-9e20-9d9df1ac26ac" "httpbin.testns1.svc.cluster.local" "127.0.0.1:80" inbound|8000|http|httpbin.testns1.svc.cluster.local 127.0.0.1:45168 192.168.94.99:80 192.168.64.239:55198 outbound_.8000_.v1_.httpbin.testns1.svc.cluster.local default
 [2020-11-23T10:52:12.711Z] "GET /delay/15 HTTP/1.1" 0 DC "-" "-" 0 0 1999 - "-" "curl/7.35.0" "fc786864-ce72-4eae-9e20-9d9df1ac26ac" "httpbin.testns1.svc.cluster.local" "127.0.0.1:80" inbound|8000|http|httpbin.testns1.svc.cluster.local 127.0.0.1:45190 192.168.94.99:80 192.168.64.239:55220 outbound_.8000_.v1_.httpbin.testns1.svc.cluster.local default
+```
+
+#### retries (baseInterval and maxInterval)
+The retry interval can be controlled by setting envoyfilter.
+In the following configuration, base_interval is set to 4S and max_interval is set to 5s.
+
+```yaml
+# kubectl apply -f manifests/envoyfilter-retries-interval.yaml -n testns1
+
+kubectl apply -n testns1 -f - <<EOF
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: httpbin
+spec:
+  hosts:
+  - httpbin.testns1.svc.cluster.local
+  http:
+  - match:
+    - uri:
+        prefix: /status
+      method:
+        exact: GET
+    - uri:
+        prefix: /delay
+      method:
+        exact: GET
+    timeout: 10s
+    retries:
+      attempts: 2
+      perTryTimeout: 3s
+      retryOn: 5xx,connect-failure
+    route:
+    - destination:
+        host: httpbin.testns1.svc.cluster.local
+        port:
+          number: 8000
+        subset: v1
+  - match:
+    - uri:
+        prefix: /status
+      method:
+        exact: POST
+    - uri:
+        prefix: /delay
+      method:
+        exact: POST
+    timeout: 3s
+    route:
+    - destination:
+        host: httpbin.testns1.svc.cluster.local
+        port:
+          number: 8000
+        subset: v1
+EOF
 ```
 
 #### retry only for idempotent methods
@@ -1146,20 +1037,20 @@ metadata:
   name: httpbin
 spec:
   hosts:
-  - httpbin.testns1.svc.cluster.local 
+  - httpbin.testns1.svc.cluster.local
   gateways:
   - mesh
   http:
   - route:
     - destination:
-        host: httpbin.testns1.svc.cluster.local 
+        host: httpbin.testns1.svc.cluster.local
         port:
           number: 8000
         subset: v1
       weight: 100
     # Mirror 100% traffic for v1 to v2 service:
     mirror:
-      host: httpbin.testns1.svc.cluster.local 
+      host: httpbin.testns1.svc.cluster.local
       port:
         number: 8000
       subset: v2
@@ -1414,7 +1305,7 @@ See also [Traffic Management - Circit Breaking](https://istio.io/latest/docs/tas
 
 ### Rate Limiting
 
-Since the mixer policy was deprecated in Istio 1.5, there is no native rate limiting API supported in Istio and [Envoy native rate limiting](https://www.envoyproxy.io/docs/envoy/v1.13.0/intro/arch_overview/other_features/global_rate_limiting) is recommended instead. 
+Since the mixer policy was deprecated in Istio 1.5, there is no native rate limiting API supported in Istio and [Envoy native rate limiting](https://www.envoyproxy.io/docs/envoy/v1.13.0/intro/arch_overview/other_features/global_rate_limiting) is recommended instead.
 
 - [Reference rate limit service implementation](https://github.com/envoyproxy/ratelimit) provided by Lyft, which is written in Go and uses a Redis backend
 - [Sample rate limiting configuration](https://github.com/aboullaite/service-mesh#1-rate-limiting) that leverages rate limit service
@@ -1536,7 +1427,7 @@ TBU
 
 ### Istio Static Analysis (analyze)
 https://istio.io/latest/docs/ops/diagnostic-tools/istioctl-analyze/
- 
+
 TBU
 
 ### ControlZ
