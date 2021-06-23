@@ -1,0 +1,15 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: non-existent-service
+spec:
+  hosts:
+  - non-existent-service.testns1.svc.cluster.local 
+  http:
+  - route:
+    - destination:
+        host: non-existent-service.testns1.svc.cluster.local 
+        port:
+          number: 80
+    retries:
+      attempts: 0
