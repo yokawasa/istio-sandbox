@@ -33,6 +33,7 @@ This is my personal Istio sandbox repository where I play around with [Istio](ht
     - [Retries](#retries)
       - [retries (perTryTimeout and retryOn)](#retries-pertrytimeout-and-retryon)
       - [retries and timeout](#retries-and-timeout)
+      - [retries (baseInterval and maxInterval)](#retries-baseinterval-and-maxinterval)
       - [retry only for idempotent methods](#retry-only-for-idempotent-methods)
     - [Mirroring](#mirroring)
     - [Load Balancing](#load-balancing)
@@ -1047,6 +1048,61 @@ kubectl logs <v1 pod> -n testns1 -c istio-proxy -f --tail 0
 [2020-11-23T10:52:08.580Z] "GET /delay/15 HTTP/1.1" 0 DC "-" "-" 0 0 1999 - "-" "curl/7.35.0" "fc786864-ce72-4eae-9e20-9d9df1ac26ac" "httpbin.testns1.svc.cluster.local" "127.0.0.1:80" inbound|8000|http|httpbin.testns1.svc.cluster.local 127.0.0.1:45148 192.168.94.99:80 192.168.64.239:55178 outbound_.8000_.v1_.httpbin.testns1.svc.cluster.local default
 [2020-11-23T10:52:10.615Z] "GET /delay/15 HTTP/1.1" 0 DC "-" "-" 0 0 1999 - "-" "curl/7.35.0" "fc786864-ce72-4eae-9e20-9d9df1ac26ac" "httpbin.testns1.svc.cluster.local" "127.0.0.1:80" inbound|8000|http|httpbin.testns1.svc.cluster.local 127.0.0.1:45168 192.168.94.99:80 192.168.64.239:55198 outbound_.8000_.v1_.httpbin.testns1.svc.cluster.local default
 [2020-11-23T10:52:12.711Z] "GET /delay/15 HTTP/1.1" 0 DC "-" "-" 0 0 1999 - "-" "curl/7.35.0" "fc786864-ce72-4eae-9e20-9d9df1ac26ac" "httpbin.testns1.svc.cluster.local" "127.0.0.1:80" inbound|8000|http|httpbin.testns1.svc.cluster.local 127.0.0.1:45190 192.168.94.99:80 192.168.64.239:55220 outbound_.8000_.v1_.httpbin.testns1.svc.cluster.local default
+```
+
+#### retries (baseInterval and maxInterval)
+The retry interval can be controlled by setting envoyfilter.
+In the following configuration, base_interval is set to 4s and max_interval is set to 5s.
+
+```yaml
+# kubectl apply -f manifests/envoyfilter-retries-interval.yaml -n testns1
+
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: retry-interval
+spec:
+  workloadSelector:
+    labels:
+      app: sleep
+  configPatches:
+  - applyTo: HTTP_ROUTE
+    match:
+      context: SIDECAR_OUTBOUND
+      routeConfiguration:
+        vhost:
+          name: "httpbin.testns1.svc.cluster.local:80"
+    patch:
+      operation: MERGE
+      value:
+        route:
+          retry_policy:
+            retry_back_off:
+              base_interval: 4s
+              max_interval: 5s
+              retriable_status_codes:
+                - 504
+EOF
+```
+
+Send the HTTP request to http://httpbin.testns1.svc.cluster.local/status/504. The endpoint is supposed to return a status 504 response.
+
+```bash
+export NAMESPACE=testns1
+export SLEEP_POD=$(kubectl get pod -l app=sleep -n $NAMESPACE -o jsonpath={.items..metadata.name})
+kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv  "http://httpbin.${NAMESPACE}.svc.cluster.local/status/504"
+```
+
+The retry interval is determined by the Envoy retries Algorithm described above.
+You can check the access log for retries with the max retry interval of 5 second as follows:
+
+```txt
+kubectl logs <v1 pod> -n testns1 -c istio-proxy -f --tail 0
+
+[2021-06-22T11:40:42.838Z] "GET /status/504 HTTP/1.1" 504 - via_upstream - "-" 0 0 1 0 "-" "curl/7.77.0-DEV" "715a99c3-fce7-9d1b-919f-e3aa30e9894e" "httpbin.testns1.svc.cluster.local" "127.0.0.1:80" inbound|80|| 127.0.0.1:58972 10.173.45.58:80 10.173.26.3:56782 outbound_.8000_.v1_.httpbin.testns1.svc.cluster.local default
+[2021-06-22T11:40:45.122Z] "GET /status/504 HTTP/1.1" 504 - via_upstream - "-" 0 0 1 0 "-" "curl/7.77.0-DEV" "715a99c3-fce7-9d1b-919f-e3aa30e9894e" "httpbin.testns1.svc.cluster.local" "127.0.0.1:80" inbound|80|| 127.0.0.1:59038 10.173.45.58:80 10.173.26.3:56782 outbound_.8000_.v1_.httpbin.testns1.svc.cluster.local default
+[2021-06-22T11:40:50.011Z] "GET /status/504 HTTP/1.1" 504 - via_upstream - "-" 0 0 1 0 "-" "curl/7.77.0-DEV" "715a99c3-fce7-9d1b-919f-e3aa30e9894e" "httpbin.testns1.svc.cluster.local" "127.0.0.1:80" inbound|80|| 127.0.0.1:59184 10.173.45.58:80 10.173.26.3:56782 outbound_.8000_.v1_.httpbin.testns1.svc.cluster.local default
+[2021-06-22T11:40:50.710Z] "GET /status/504 HTTP/1.1" 504 - via_upstream - "-" 0 0 1 0 "-" "curl/7.77.0-DEV" "715a99c3-fce7-9d1b-919f-e3aa30e9894e" "httpbin.testns1.svc.cluster.local" "127.0.0.1:80" inbound|80|| 127.0.0.1:59194 10.173.45.58:80 10.173.26.3:56782 outbound_.8000_.v1_.httpbin.testns1.svc.cluster.local default
 ```
 
 #### retry only for idempotent methods
