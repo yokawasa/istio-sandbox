@@ -1093,8 +1093,8 @@ export SLEEP_POD=$(kubectl get pod -l app=sleep -n $NAMESPACE -o jsonpath={.item
 kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -sv  "http://httpbin.${NAMESPACE}.svc.cluster.local/status/504"
 ```
 
-You can check the access log for retries with 5s as the max retry interval.
 The retry interval is determined by the Envoy retries Algorithm described above.
+You can check the access log for retries with the max retry interval of 5 second as follows:
 
 ```txt
 kubectl logs <v1 pod> -n testns1 -c istio-proxy -f --tail 0
