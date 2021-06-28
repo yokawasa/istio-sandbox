@@ -1219,7 +1219,8 @@ spec:
       port:
         number: 8000
       subset: v2
-    mirror_percent: 100
+    mirrorPercentage:
+      value: 100.0
 EOF
 ```
 
