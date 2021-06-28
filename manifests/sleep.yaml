@@ -11,9 +11,9 @@ spec:
     metadata:
       labels:
         app: sleep
-      annotations:
-       # If you want to inject istio-proxy, turn this annotation true (default value is false)
-       sidecar.istio.io/inject: "true"
+      # If the default policy in ConfigMap is disabled, turn this annotation true to inject istio-proxy.
+      # annotations:
+      #  sidecar.istio.io/inject: "true"
     spec:
       containers:
       - name: sleep
