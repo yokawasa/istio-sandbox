@@ -390,6 +390,7 @@ EOF
 ```
 
 Then, deploy sample app, httpbin under the `testns1` namespace.
+If the default policy of ConfigMap is disabled, you need to enable the annotation `sidecar.istio.io/inject: "true"`.
 ```yaml
 # kubectl apply -f manifests/httpbin.yaml -n testns1
 
@@ -428,6 +429,9 @@ spec:
       labels:
         app: httpbin
         version: v1
+      # If the default policy in ConfigMap is disabled, turn this annotation true to inject istio-proxy.
+      # annotations:
+      #  sidecar.istio.io/inject: "true"
     spec:
       serviceAccountName: httpbin
       containers:
@@ -453,6 +457,9 @@ spec:
       labels:
         app: httpbin
         version: v2
+      # If the default policy in ConfigMap is disabled, turn this annotation true to inject istio-proxy.
+      # annotations:
+      #  sidecar.istio.io/inject: "true"
     spec:
       serviceAccountName: httpbin
       containers:
@@ -466,6 +473,7 @@ EOF
 ```
 
 Finally, deploy test client pods under both `testns1` and `testns2` namespace
+If the default policy of ConfigMap is disabled, you need to enable the annotation `sidecar.istio.io/inject: "true"`.
 ```yaml
 # kubectl apply -f manifests/sleep.yaml -n testns1
 # kubectl apply -f manifests/sleep.yaml -n testns1
@@ -484,6 +492,9 @@ spec:
     metadata:
       labels:
         app: sleep
+      # If the default policy in ConfigMap is disabled, turn this annotation true to inject istio-proxy.
+      # annotations:
+      #  sidecar.istio.io/inject: "true"
     spec:
       containers:
       - name: sleep
@@ -506,6 +517,9 @@ spec:
     metadata:
       labels:
         app: sleep
+      # If the default policy in ConfigMap is disabled, turn this annotation true to inject istio-proxy.
+      # annotations:
+      #  sidecar.istio.io/inject: "true"
     spec:
       containers:
       - name: sleep

@@ -51,8 +51,8 @@ spec:
       labels:
         app: httpbin
         version: v1
+      # If the default policy in ConfigMap is disabled, turn this annotation true to inject istio-proxy.
       # annotations:
-      #  # If you want to inject istio-proxy, turn this annotation true (default value is false)
       #  sidecar.istio.io/inject: "true"
     spec:
       serviceAccountName: httpbin
@@ -80,8 +80,8 @@ spec:
       labels:
         app: httpbin
         version: v2
+      # If the default policy in ConfigMap is disabled, turn this annotation true to inject istio-proxy.
       # annotations:
-      #  # If you want to inject istio-proxy, turn this annotation true (default value is false)
       #  sidecar.istio.io/inject: "true"
     spec:
       serviceAccountName: httpbin
