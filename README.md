@@ -973,7 +973,7 @@ spec:
     retries:
       attempts: 3
       perTryTimeout: 2s
-      retryOn: 5xx, connect-failure
+      retryOn: 5xx,connect-failure
 EOF
 ```
 
