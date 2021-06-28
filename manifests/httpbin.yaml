@@ -51,9 +51,9 @@ spec:
       labels:
         app: httpbin
         version: v1
-      # annotations:
-      #  # If you want to inject istio-proxy, turn this annotation true (default value is false)
-      #  sidecar.istio.io/inject: "true"
+      annotations:
+       # If you want to inject istio-proxy, turn this annotation true (default value is false)
+       sidecar.istio.io/inject: "true"
     spec:
       serviceAccountName: httpbin
       containers:
@@ -80,9 +80,9 @@ spec:
       labels:
         app: httpbin
         version: v2
-      # annotations:
-      #  # If you want to inject istio-proxy, turn this annotation true (default value is false)
-      #  sidecar.istio.io/inject: "true"
+      annotations:
+       # If you want to inject istio-proxy, turn this annotation true (default value is false)
+       sidecar.istio.io/inject: "true"
     spec:
       serviceAccountName: httpbin
       containers:

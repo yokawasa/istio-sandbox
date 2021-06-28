@@ -428,6 +428,8 @@ spec:
       labels:
         app: httpbin
         version: v1
+      annotations:
+       sidecar.istio.io/inject: "true"
     spec:
       serviceAccountName: httpbin
       containers:
@@ -453,6 +455,8 @@ spec:
       labels:
         app: httpbin
         version: v2
+      annotations:
+       sidecar.istio.io/inject: "true"
     spec:
       serviceAccountName: httpbin
       containers:
@@ -484,6 +488,8 @@ spec:
     metadata:
       labels:
         app: sleep
+      annotations:
+       sidecar.istio.io/inject: "true"
     spec:
       containers:
       - name: sleep
