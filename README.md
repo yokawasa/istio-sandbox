@@ -38,6 +38,8 @@ This is my personal Istio sandbox repository where I play around with [Istio](ht
     - [Mirroring](#mirroring)
     - [Load Balancing](#load-balancing)
     - [Circuit Breaking](#circuit-breaking)
+      - [Connection Pool](#connection-pool)
+      - [Outlier Detection](#outlier-detection)
     - [Rate Limiting](#rate-limiting)
     - [Ingress](#ingress)
       - [Ingress Gateay and Gateway](#ingress-gateay-and-gateway)
@@ -285,7 +287,7 @@ In-place vs. Canary upgrade
 - https://istio.io/latest/docs/setup/install/operator/#in-place-upgrade
 - https://istio.io/latest/docs/setup/install/operator/#canary-upgrade
 
-## Automatic Sidecar Injection 
+## Automatic Sidecar Injection
 
 3 configuration items for Automatic Sidecar Injection
 - webhooks `namespaceSelector` (istio-injection: enabled)
@@ -340,7 +342,7 @@ template: |
 
 You can change the default policy by directly editing the configmap
 ```
-kubectl -n istio-system edit configmap istio-sidecar-injector 
+kubectl -n istio-system edit configmap istio-sidecar-injector
 ```
 
 ### Per-pod override annotation
@@ -758,11 +760,11 @@ metadata:
   name: httpbin
 spec:
   hosts:
-  - httpbin.testns1.svc.cluster.local 
+  - httpbin.testns1.svc.cluster.local
   http:
   - route:
     - destination:
-        host: httpbin.testns1.svc.cluster.local 
+        host: httpbin.testns1.svc.cluster.local
         port:
           number: 8000
         subset: v1
@@ -848,11 +850,11 @@ metadata:
   name: non-existent-service
 spec:
   hosts:
-  - non-existent-service.testns1.svc.cluster.local 
+  - non-existent-service.testns1.svc.cluster.local
   http:
   - route:
     - destination:
-        host: non-existent-service.testns1.svc.cluster.local 
+        host: non-existent-service.testns1.svc.cluster.local
         port:
           number: 80
     retries:
@@ -1216,20 +1218,20 @@ metadata:
   name: httpbin
 spec:
   hosts:
-  - httpbin.testns1.svc.cluster.local 
+  - httpbin.testns1.svc.cluster.local
   gateways:
   - mesh
   http:
   - route:
     - destination:
-        host: httpbin.testns1.svc.cluster.local 
+        host: httpbin.testns1.svc.cluster.local
         port:
           number: 8000
         subset: v1
       weight: 100
     # Mirror 100% traffic for v1 to v2 service:
     mirror:
-      host: httpbin.testns1.svc.cluster.local 
+      host: httpbin.testns1.svc.cluster.local
       port:
         number: 8000
       subset: v2
@@ -1336,8 +1338,10 @@ EOF
   - `interval`: Time interval between ejection sweep analysis. format: 1h/1m/1s/1ms.
   - `baseEjectionTime`: Minimum ejection duration. A host will remain ejected for a period equal to the product of minimum ejection duration and the number of times the host has been ejected.
 
+#### Connection Pool
 
 Deploy test client - fortio
+
 ```yaml
 # kubectl apply -f manifests/fortio.yaml -n testns1
 
@@ -1481,11 +1485,49 @@ Response Body/Total Sizes : count 100 avg 842.68 +/- 177.4 min 241 max 895 sum 8
 All done 100 calls (plus 0 warmup) 30.385 ms avg, 325.2 qps
 ```
 
+#### Outlier Detection
+
+Send the HTTP request to http://httpbin.testns1.svc.cluster.local/status/503 repeatedly.
+
+```bash
+export NAMESPACE=testns1
+export SLEEP_POD=$(kubectl get pod -l app=sleep -n $NAMESPACE -o jsonpath={.items..metadata.name})
+watch kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -s "http://httpbin.${NAMESPACE}.svc.cluster.local/status/503"
+```
+
+At the same time, send repeated HTTP requests to http://httpbin.testns1.svc.cluster.local/status/200 from another console.
+
+```bash
+export NAMESPACE=testns1
+export SLEEP_POD=$(kubectl get pod -l app=sleep -n $NAMESPACE -o jsonpath={.items..metadata.name})
+watch kubectl exec "${SLEEP_POD}" -c sleep -n $NAMESPACE -- curl -s "http://httpbin.${NAMESPACE}.svc.cluster.local/status/200"
+```
+
+The pod is ejected after detecting 503 status 10 times.
+After the pod is ejected, no requests with status 200 and 503 have reached the istio-proxy pod.
+
+```bash
+kubectl logs <v1 pod> -n testns1 -c istio-proxy -f --tail 0
+
+[2021-07-07T11:13:55.475Z] "GET /status/503 HTTP/1.1" 503 - via_upstream - "-" 0 0 1 1 "-" "curl/7.77.0-DEV" "447b879f-5b55-9c29-95a1-4699fb123df5" "httpbin.testns1.svc.cluster.local" "127.0.0.1:80" inbound|80|| 127.0.0.1:57248 10.173.50.157:80 10.173.52.143:49354 outbound_.8000_.v1_.httpbin.testns1.svc.cluster.local default
+[2021-07-07T11:13:55.484Z] "GET /status/503 HTTP/1.1" 503 - via_upstream - "-" 0 0 1 0 "-" "curl/7.77.0-DEV" "447b879f-5b55-9c29-95a1-4699fb123df5" "httpbin.testns1.svc.cluster.local" "127.0.0.1:80" inbound|80|| 127.0.0.1:57250 10.173.50.157:80 10.173.52.143:49354 outbound_.8000_.v1_.httpbin.testns1.svc.cluster.local default
+[2021-07-07T11:13:55.503Z] "GET /status/503 HTTP/1.1" 503 - via_upstream - "-" 0 0 1 1 "-" "curl/7.77.0-DEV" "447b879f-5b55-9c29-95a1-4699fb123df5" "httpbin.testns1.svc.cluster.local" "127.0.0.1:80" inbound|80|| 127.0.0.1:57252 10.173.50.157:80 10.173.52.143:49354 outbound_.8000_.v1_.httpbin.testns1.svc.cluster.local default
+```
+
+The status of the endpoint can be checked with the following command.
+
+```bash
+istioctl proxy-config endpoint <sleep pod>  -n testns1  | egrep '^ENDPOINT|v1\|httpbin'
+
+ENDPOINT                         STATUS      OUTLIER CHECK     CLUSTER
+10.173.50.157:80                 HEALTHY     FAILED            outbound|8000|v1|httpbin.testns1.svc.cluster.local
+```
+
 See also [Traffic Management - Circit Breaking](https://istio.io/latest/docs/tasks/traffic-management/circuit-breaking/)
 
 ### Rate Limiting
 
-Since the mixer policy was deprecated in Istio 1.5, there is no native rate limiting API supported in Istio and [Envoy native rate limiting](https://www.envoyproxy.io/docs/envoy/v1.13.0/intro/arch_overview/other_features/global_rate_limiting) is recommended instead. 
+Since the mixer policy was deprecated in Istio 1.5, there is no native rate limiting API supported in Istio and [Envoy native rate limiting](https://www.envoyproxy.io/docs/envoy/v1.13.0/intro/arch_overview/other_features/global_rate_limiting) is recommended instead.
 
 - [Reference rate limit service implementation](https://github.com/envoyproxy/ratelimit) provided by Lyft, which is written in Go and uses a Redis backend
 - [Sample rate limiting configuration](https://github.com/aboullaite/service-mesh#1-rate-limiting) that leverages rate limit service
@@ -1545,6 +1587,155 @@ kubectl logs httpbin-v2-d98698f69-4jf9f -n testns1 -c istio-proxy -f --tail 0
 ### Egress
 
 #### Direct traffic to external services with Service Entries
+
+First, change the access settings for outside mesh to allow only registered destinations.
+
+```bash
+kubectl get configmap istio -n istio-system -o yaml | sed 's/mode: ALLOW_ANY/mode: REGISTRY_ONLY/g' | kubectl replace -n istio-system -f -
+```
+
+Next, disable Automatic Sidecar Injection in testns2 and deploy httpbin to testns2 which is now out of the mesh.
+
+```yaml
+# kubectl apply -f manifests/namespace.yaml
+
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: testns1
+  labels:
+    istio-injection: enabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: testns2
+  labels:
+    istio-injection: false # Change from enable to false
+EOF
+```
+
+```bash
+kubectl apply -f manifests/httpbin.yaml -n testns2
+```
+
+Try the following request from the namespace testns1 inside the mesh to the namespace testns2 outside the mesh.
+You should see a 502 error.
+
+```bash
+kubectl exec "${SLEEP_POD}" -c sleep -n testns1 -- curl -sv  "http://httpbin.testns2.svc.cluster.local/status/200"
+```
+
+```txt
+*   Trying 172.20.106.79:80...
+* Connected to httpbin.testns2.svc.cluster.local (172.20.106.79) port 80 (#0)
+> GET /status/200 HTTP/1.1
+> Host: httpbin.testns2.svc.cluster.local
+> User-Agent: curl/7.77.0-DEV
+> Accept: */*
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 502 Bad Gateway
+< date: Mon, 19 Jul 2021 03:48:08 GMT
+< server: envoy
+< content-length: 0
+<
+* Connection #0 to host httpbin.testns2.svc.cluster.local left intact
+```
+
+Apply a service entry to allow traffic outside of mesh
+
+```yaml
+# kubectl apply -f manifests/service-entry.yaml -n testns1
+
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+ name: external-svc-dns
+spec:
+ hosts:
+ - httpbin.testns2.svc.cluster.local
+ location: MESH_EXTERNAL
+ ports:
+ - number: 80
+   name: http
+   protocol: HTTP
+ resolution: DNS
+ endpoints:
+ - address: httpbin.testns2.svc.cluster.local
+   ports:
+     http: 8000
+EOF
+```
+
+Try the request to the namespace testns2 again. This time you will get a result with status 200.
+
+```bash
+kubectl exec "${SLEEP_POD}" -c sleep -n testns1 -- curl -sv  "http://httpbin.testns2.svc.cluster.local/status/200"
+```
+
+```txt
+*   Trying 172.20.106.79:80...
+* Connected to httpbin.testns2.svc.cluster.local (172.20.106.79) port 80 (#0)
+> GET /status/200 HTTP/1.1
+> Host: httpbin.testns2.svc.cluster.local
+> User-Agent: curl/7.77.0-DEV
+> Accept: */*
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 200 OK
+< server: envoy
+< date: Mon, 19 Jul 2021 07:21:48 GMT
+< content-type: text/html; charset=utf-8
+< access-control-allow-origin: *
+< access-control-allow-credentials: true
+< content-length: 0
+< x-envoy-upstream-service-time: 4
+<
+* Connection #0 to host httpbin.testns2.svc.cluster.local left intact
+```
+
+In addition, Traffic Management can be applied to requests outside the mesh.
+For example, you can apply a circuit breaker destination rule to check the operation of a circuit breaker as follows.
+
+```yaml
+# kubectl apply -f manifests/destinationrule-circuit-breaker.yaml -n testns1
+
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: httpbin
+spec:
+  host: httpbin.testns2.svc.cluster.local # Change from testns1 to testns2
+  trafficPolicy:
+    connectionPool:
+      tcp:
+        maxConnections: 10
+      http:
+        http1MaxPendingRequests: 10
+        http2MaxRequests: 100
+        maxRequestsPerConnection: 2
+    outlierDetection:
+      consecutiveErrors: 10
+      interval: 1m
+      baseEjectionTime: 3m
+      maxEjectionPercent: 100
+  subsets:
+  - name: v1
+    labels:
+      version: v1
+  - name: v2
+    labels:
+      version: v2
+EOF
+```
+
+Restores the external traffic settings.
+
+```bash
+kubectl get configmap istio -n istio-system -o yaml | sed 's/mode: REGISTRY_ONLY/mode: ALLOW_ANY/g' | kubectl replace -n istio-system -f -
+```
 
 #### Accessng external services via Egress Gateway
 
@@ -1607,7 +1798,7 @@ TBU
 
 ### Istio Static Analysis (analyze)
 https://istio.io/latest/docs/ops/diagnostic-tools/istioctl-analyze/
- 
+
 TBU
 
 ### ControlZ
