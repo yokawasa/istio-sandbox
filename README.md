@@ -463,7 +463,7 @@ EOF
 Finally, deploy test client pods under both `testns1` and `testns2` namespace
 ```yaml
 # kubectl apply -f manifests/sleep.yaml -n testns1
-# kubectl apply -f manifests/sleep.yaml -n testns1
+# kubectl apply -f manifests/sleep.yaml -n testns2
 
 kubectl apply -n testns1 -f - <<EOF
 apiVersion: apps/v1
@@ -487,7 +487,7 @@ spec:
         imagePullPolicy: IfNotPresent
 EOF
 
-kubectl apply -n testns1 -f - <<EOF
+kubectl apply -n testns2 -f - <<EOF
 apiVersion: apps/v1
 kind: Deployment
 metadata:
