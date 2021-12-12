@@ -22,7 +22,7 @@ spec:
         # includeIPRanges: "172.30.0.0/16,172.21.0.0/16,10.10.10.0/24"
       logging:
         ## default:info
-        level: "default:warning"
+        level: "default:warn"
   #components:
   #  egressGateways:
   #  - name: istio-egressgateway
