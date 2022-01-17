@@ -77,6 +77,7 @@ nodes:
 - role: worker
 EOF
 ```
+> NOTE: the cluster config file can be found at `config/kind/cluster.yaml`
 
 Then, create a k8s cluster with v1.19.11 node image using kind CLI:
 
@@ -99,6 +100,7 @@ NAME                            STATUS   ROLES    AGE   VERSION
 my-kind-cluster-control-plane   Ready    master   37m   v1.19.11
 my-kind-cluster-worker          Ready    <none>   37m   v1.19.11
 ```
+
 ## Install Istio
 
 There are 3 ways to install, upgrade, and uninstall istio:
