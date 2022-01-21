@@ -870,7 +870,7 @@ metadata:
   name: non-existent-service
 subsets:
   - addresses:
-    - ip: <non-existent IP address>
+    - ip: 192.0.2.1 # non-existent IP address
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: ServiceEntry
