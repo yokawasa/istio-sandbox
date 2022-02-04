@@ -870,7 +870,7 @@ metadata:
   name: non-existent-service
 subsets:
   - addresses:
-    - ip: <non-existent IP address>
+    - ip: 192.0.2.1 # non-existent IP address
 ---
 apiVersion: networking.istio.io/v1alpha3
 kind: ServiceEntry
@@ -911,7 +911,7 @@ spec:
       attempts: 0
 EOF
 
-# kubectl apply -f manifests/destination-rule-connect-timeout.yaml -n testns1
+# kubectl apply -f manifests/destinationrule-connect-timeout.yaml -n testns1
 
 kubectl apply -n testns1 -f - <<EOF
 apiVersion: networking.istio.io/v1alpha3
@@ -964,7 +964,7 @@ The default value of connectTimeout is 10 sec, so the request will timeout at id
 Set the http idle timeout in spec.trafficPolicy.connectionPool.http.idleTimeout in DestinationRule.
 (The default is 1 hour.)
 ```yaml
-# kubectl apply -f manifests/destination-rule-idle-timeout.yaml -n testns1
+# kubectl apply -f manifests/destinationrule-idle-timeout.yaml -n testns1
 
 kubectl apply -n testns1 -f - <<EOF
 apiVersion: networking.istio.io/v1alpha3
