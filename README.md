@@ -114,11 +114,19 @@ There are 3 ways to install, upgrade, and uninstall istio:
 
 ### Install istioctl
 
-```
+```bash
 curl -L https://istio.io/downloadIstio | sh -
+
+# Or you can specify the istio version by giving ISTIO_VERSION=<istio-version>
+# curl -L https://git.io/getLatestIstio | ISTIO_VERSION=<version> sh
+curl -L https://git.io/getLatestIstio | ISTIO_VERSION=1.12.1 sh
 ```
 
-`istio-1.7.4/bin/istioctl` をPATHに含める
+Then, add the istio-<version>/bin directory to your environment path variable with:
+
+```bash
+export PATH="$PATH:/path-to-/istio-<version>/bin"
+```
 
 ### Istioctl
 #### Install istio using istioctl
@@ -131,11 +139,14 @@ kubectl create namespace istio-system
 install the `default` Istio configuration profile. See [configuration profile](https://istio.io/latest/docs/setup/additional-setup/config-profiles/) for more about istio installation profiles.
 
 ```bash
-istioctl install -set profile=default
+istioctl install -set profile=default -y
 
+# Or generate manifest and apply on the fly like this
 istioctl manifest generate --set profile=default | kubectl apply -f -
 
+# Or you can redirect the generated manifest to a file and apply from the file
 istioctl manifest generate --set profile=default > generated-manifest.yaml
+kubectl apply -f generated-manifest.yaml
 ```
 
 You can [verify](https://istio.io/latest/docs/setup/install/istioctl/#verify-a-successful-installation) the manifest
