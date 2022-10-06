@@ -82,7 +82,7 @@ EOF
 Then, create a k8s cluster with v1.19.11 node image using kind CLI:
 
 ```bash
-K8S_NODE_IMAGE=v1.19.11
+K8S_NODE_IMAGE=v1.21.10
 kind create cluster --name my-kind-cluster \
 --image=kindest/node:${K8S_NODE_IMAGE} \
 --config cluster.yaml
@@ -92,13 +92,13 @@ Once it's done, you can access the cluster:
 
 ```bash
 kubectl version
-Client Version: version.Info{Major:"1", Minor:"19", GitVersion:"v1.19.13", GitCommit:"53c7b65d4531a749cd3a7004c5212d23daa044a9", GitTreeState:"clean", BuildDate:"2021-07-15T20:58:11Z", GoVersion:"go1.15.14", Compiler:"gc", Platform:"darwin/amd64"}
-Server Version: version.Info{Major:"1", Minor:"19", GitVersion:"v1.19.11", GitCommit:"c6a2f08fc4378c5381dd948d9ad9d1080e3e6b33", GitTreeState:"clean", BuildDate:"2021-05-27T23:47:11Z", GoVersion:"go1.15.12", Compiler:"gc", Platform:"linux/amd64"}
+Client Version: version.Info{Major:"1", Minor:"19", GitVersion:"v1.21.11", GitCommit:"53c7b65d4531a749cd3a7004c5212d23daa044a9", GitTreeState:"clean", BuildDate:"2021-07-15T20:58:11Z", GoVersion:"go1.15.14", Compiler:"gc", Platform:"darwin/amd64"}
+Server Version: version.Info{Major:"1", Minor:"19", GitVersion:"v1.21.11", GitCommit:"c6a2f08fc4378c5381dd948d9ad9d1080e3e6b33", GitTreeState:"clean", BuildDate:"2021-05-27T23:47:11Z", GoVersion:"go1.15.12", Compiler:"gc", Platform:"linux/amd64"}
 
 kubectl get node
 NAME                            STATUS   ROLES    AGE   VERSION
-my-kind-cluster-control-plane   Ready    master   37m   v1.19.11
-my-kind-cluster-worker          Ready    <none>   37m   v1.19.11
+my-kind-cluster-control-plane   Ready    master   37m   v1.21.10
+my-kind-cluster-worker          Ready    <none>   37m   v1.21.10
 ```
 
 ## Install Istio
