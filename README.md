@@ -1134,6 +1134,7 @@ In the following configuration, base_interval is set to 4s and max_interval is s
 ```yaml
 # kubectl apply -f manifests/envoyfilter-retries-interval.yaml -n testns1
 
+kubectl apply -n testns1 -f - <<EOF
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
