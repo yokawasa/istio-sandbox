@@ -69,9 +69,9 @@ Here we setup a local Kubernetes Cluster provided by the [KIND (Kubernetes IN Do
 First of all, create the following kind cluster configuration file (`cluster.yaml`) to deploy to a local Kubernetes cluster/Kind instance (control plane node x 1、 worker node x 1):
 
 ```yaml
-cat << EOF | > cluster.yaml 
+cat << EOF | > cluster.yaml
 kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4 
+apiVersion: kind.x-k8s.io/v1alpha4
 nodes:
 - role: control-plane
 - role: worker
@@ -139,7 +139,7 @@ kubectl create namespace istio-system
 install the `default` Istio configuration profile. See [configuration profile](https://istio.io/latest/docs/setup/additional-setup/config-profiles/) for more about istio installation profiles.
 
 ```bash
-istioctl install -set profile=default -y
+istioctl install --set profile=default -y
 
 # Or generate manifest and apply on the fly like this
 istioctl manifest generate --set profile=default | kubectl apply -f -
@@ -1134,6 +1134,7 @@ In the following configuration, base_interval is set to 4s and max_interval is s
 ```yaml
 # kubectl apply -f manifests/envoyfilter-retries-interval.yaml -n testns1
 
+kubectl apply -n testns1 -f - <<EOF
 apiVersion: networking.istio.io/v1alpha3
 kind: EnvoyFilter
 metadata:
